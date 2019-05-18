@@ -26,8 +26,31 @@ public class printmessage {
 		public static final int DROP_REFERENCED_TABLE_ERROR = -21;
 		public static final int NO_SUCH_TABLE = -22;
 		
+		
+		//INSERT
+		public static final int INSERT_TYPE_MISMATCH_ERROR = -41;
+		public static final int	INSERT_COLUMN_NON_NULLABLE_ERROR = -42;
+		public static final int	INSERT_COLUMN_EXISTENCE_ERROR = -43;
+		public static final int	INSERT_DUPLICATE_PRIMARYKEY_ERROR = -44;
+		public static final int	INSERT_REFERENTIAL_INTEGRITY_ERROR = -45;
+
+		//DELETE
+		public static final int DELETE_REFERENTIAL_INTEGRITY_PASSED = -51;
+		
+		//SELECT
+		public static final int SELECT_TABLE_EXISTENCE_ERROR = -61;
+		public static final int	SELECT_COLUMN_RESOLVE_ERROR = -62;
+		
+		//SHOW
 		public static final int SHOW_TABLES_NO_TABLE = -71;
 
+		//WHERE CLAUSE
+		public static final int WHERE_INCOMPARABLE_ERROR = -400;
+		public static final int WHERE_TABLE_NOT_SPECIFIED = -401;
+		public static final int WHERE_COLUMN_NOT_EXIST = -402;
+		public static final int WHERE_AMBIGUOUS_REFERENCE = -403;
+		
+		
 	public static void printMessage(int q, String str)
 	{
 		switch(q)
@@ -45,13 +68,13 @@ public class printmessage {
 	      		//System.out.println("\'DESC\' requested");
 	      	break;
 	    	case PRINT_INSERT:
-	      		System.out.println("\'INSERT\' requested");
+	      		System.out.println("The row is inserted");
 	      	break;
 	    	case PRINT_DELETE:
-	    	  	System.out.println("\'DELETE\' requested");
+	    	  	System.out.println(str + " row(s) are deleted");
 	      	break;
 	    	case PRINT_SELECT:
-	    	  	System.out.println("\'SELECT\' requested");
+	    	  	//System.out.println("\'SELECT\' requested");
 	      	break;   	
 	    	case SUCCESS_SHOW_TABLES:
 	      		//System.out.println("\'SHOW TABLES\' requested");
@@ -97,11 +120,61 @@ public class printmessage {
 			case NO_SUCH_TABLE:
 	      		System.out.println("No such table");
 			break;
+
+//FAIL TO INSERT 
+			case INSERT_TYPE_MISMATCH_ERROR:
+				System.out.println("Insertion has failed: Types are not matched");
+				break;
+			case INSERT_COLUMN_NON_NULLABLE_ERROR:
+				System.out.println("Insertion has failed: \'" + str + "\' is not nullable");
+				break;
+			case INSERT_COLUMN_EXISTENCE_ERROR:
+				System.out.println("Insertion has failed: \'" + str + "\' does not exist");
+				break;
+			case INSERT_DUPLICATE_PRIMARYKEY_ERROR:
+				System.out.println("Insertion has failed: Primary key duplication");
+				break;
+			case INSERT_REFERENTIAL_INTEGRITY_ERROR:
+				System.out.println("Insertion has failed: Referential integrity violation");
+				break;
 			
+//FAIL TO DELETE ROW
+			case DELETE_REFERENTIAL_INTEGRITY_PASSED:
+				System.out.println(str.substring(0 , str.indexOf("/"))
+				 + " row(s) are deleted");
+				System.out.println(str.substring(str.indexOf("/") + 1)
+	    	  	 + " row(s) are not deleted due to referential integrity");
+				break;
+				
+//FAIL TO SELECT RECORD
+			case SELECT_TABLE_EXISTENCE_ERROR:
+				System.out.println("Selection has failed: \'" + str + "\' does not exist");
+				break;
+			
+			case SELECT_COLUMN_RESOLVE_ERROR:
+				System.out.println("Selection has failed: fail to resolve \'" + str + "\'");
+				break;
+			
+				
 //FAIL TO SHOW TABLES
 			case SHOW_TABLES_NO_TABLE:
 	      		System.out.println("There is no table");
-			break;
+	      		break;
+
+// FAIL IN WHERE CLAUSE
+			case WHERE_INCOMPARABLE_ERROR :
+				System.out.println("Where clause try to compare incomparable values");
+				break;
+			case WHERE_TABLE_NOT_SPECIFIED :
+				System.out.println("Where clause try to reference tables which are not specified");
+				break;
+			case WHERE_COLUMN_NOT_EXIST :
+				System.out.println("Where clause try to reference non existing column");
+				break;
+			case WHERE_AMBIGUOUS_REFERENCE :
+				System.out.println("where clause contains ambiguous reference");
+				break;
+				
 			
 	    }
 	    System.out.print("DB_2016-10586> ");

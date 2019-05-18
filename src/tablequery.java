@@ -1,4 +1,10 @@
+import java.io.UnsupportedEncodingException;
+
+import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseEntry;
+import com.sleepycat.je.LockMode;
+import com.sleepycat.je.OperationStatus;
 
 public class tablequery {
 	public static final int PRINT_SYNTAX_ERROR = 0;
@@ -35,6 +41,44 @@ public class tablequery {
 		}
 		System.out.println("----------------");
 
+		
+		
+		////////////////
+		
+		System.out.println();
+		System.out.println();
+		System.out.println();
+
+		// Open Cursor
+		Cursor cursor = null;
+		cursor = myDatabase.openCursor(null,null);
+	
+		DatabaseEntry foundKey = new DatabaseEntry();
+		DatabaseEntry foundData = new DatabaseEntry();
+	
+		cursor.getFirst(foundKey, foundData, LockMode.DEFAULT);
+		
+		do {
+		  try {
+			  String keyString = new String(foundKey.getData(), "UTF-8");
+			  String dataString = new String(foundData.getData(), "UTF-8");
+			  System.out.println("key : " + keyString);
+			  System.out.println("data : " + dataString);
+			} catch(UnsupportedEncodingException e) {
+		  		e.printStackTrace();
+			}
+		} while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
+
+	
+		// closing cursor
+		cursor.close();
+
+		
+		
+		/////////
+		
+		
+		
 		return q;
 	}
 	

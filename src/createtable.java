@@ -1,4 +1,10 @@
 import java.util.ArrayList;
+import com.sleepycat.je.Cursor;
+import com.sleepycat.je.DatabaseEntry;
+import java.io.UnsupportedEncodingException;
+import com.sleepycat.je.LockMode;
+import com.sleepycat.je.OperationStatus;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,8 +72,6 @@ public class createtable {
 		String keyReferCol = keyReferTable + "/" + "col";
 	
 		Map<String,String > map = new HashMap<String,String >();
-	
-	    
 	
 	    String sum = "";
 	
@@ -537,6 +541,13 @@ public class createtable {
 				key = tname + "/for"+String.valueOf(j) + "/col"+String.valueOf(l);
 				data = map.get(key);
 			  	dbmanage.putDataToDB( key, data  , myDatabase);
+			  	
+			  	
+			  	//added hw3 0512 - 9.1 [tname]/fortable/[colname] , [refering tablename]
+			  	key = tname +"/fortable/" + data;
+			  	tmpkey = tname + "/for" + String.valueOf(j) + "/refer";
+			  	data = map.get(tmpkey);
+			  	dbmanage.putDataToDB(key, data, myDatabase);
 			}
 	
 			// tname/for1/refer
@@ -562,10 +573,23 @@ public class createtable {
 							
 			for(int k = 1; k <= Integer.parseInt(map.get(tname + "/for" + String.valueOf(j) + "/refer/rColcount")); k++) 
 			{
-			    // tname/for1/refer/rcol1
+			    // tname/for1/refer/rcol2
 				key = tname + "/for"+String.valueOf(j) + "/refer/rcol"+String.valueOf(k);
 				data = map.get(key);
 			  	dbmanage.putDataToDB( key, data  , myDatabase);
+			  	
+			  	//3rd hw added - 8.1
+			  	String tmpdata = null;
+				tmpdata = data; // tname/for1/refer/rcol2
+			  	
+				key = tname + "/for"+String.valueOf(j) + "/col"+String.valueOf(k); // get tname/for1/col2			  	
+				data = map.get(key);
+				
+				// tname / forcols / [colname] , [rcolname] 
+				key = tname + "/forcols/" + data;
+			  	dbmanage.putDataToDB( key, tmpdata  , myDatabase);
+			  	
+			  	
 			}
 		}
 	
@@ -607,6 +631,11 @@ public class createtable {
 		  		dbmanage.putDataToDB(key,data , myDatabase);
 			
 		}
+		
+		
+
+		
+		
 		
 		q = SUCCESS_CREATE_TABLE; 
 	

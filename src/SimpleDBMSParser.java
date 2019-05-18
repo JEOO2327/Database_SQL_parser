@@ -42,6 +42,14 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         public static final int DROP_REFERENCED_TABLE_ERROR = -21;
         public static final int NO_SUCH_TABLE = -22;
 
+//INSERT        public static final int INSERT_TYPE_MISMATCH_ERROR = -41;
+        public static final int INSERT_COLUMN_NON_NULLABLE_ERROR = -42;
+        public static final int INSERT_COLUMN_EXISTENCE_ERROR = -43;
+        public static final int INSERT_DUPLICATE_PRIMARYKEY_ERROR = -44;
+        public static final int INSERT_REFERENTIAL_INTEGRITY_ERROR = -45;
+
+
+
         public static final int SHOW_TABLES_NO_TABLE = -71;
 
         // Open Database Environment or if not, create one.
@@ -54,6 +62,10 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         public static tablequery tableinfo = new tablequery();
         public static droptable dropmethod = new droptable();
         public static printmessage print_message = new printmessage();
+
+        public static insert insert_method = new insert();
+        public static delete delete_method = new delete();
+        public static select select_method = new select();
 
 
 
@@ -71,6 +83,8 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
 
     SimpleDBMSParser parser = new SimpleDBMSParser(System.in);
     System.out.print("DB_2016-10586> ");
+
+
 
     while (true)
     {
@@ -139,17 +153,34 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
   }
 
   static final public void query() throws ParseException {
-  int q;
-  String tname;
-  String[] q_tname = new String[2];
- ArrayList<String> slist = new ArrayList<String>();
+        int q;
+        String tname;
+        String[] q_tname = new String[2];
+
+        String str;
+        String[] q_str = new String[2];
+
+        ArrayList<String> col_list = new ArrayList<String>();
+        ArrayList<String > val_list = new ArrayList<String >();
+        ArrayList<String > val_type = new ArrayList<String >();
+
+        ArrayList<String > tname_list = new ArrayList<String >();
+        ArrayList<String > tnewname_list = new ArrayList<String >();
+
+        ArrayList<String > table_period_list = new ArrayList<String >();
+        ArrayList<String > colname_list = new ArrayList<String >();
+        ArrayList<String > cnewname_list = new ArrayList<String >();
+
+
+        ArrayList<String> predicate_list = new ArrayList<String>();
+        ArrayList<String> predicate_info_list = new ArrayList<String>();
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case CREATE_TABLE:
-      tname = createTableQuery(slist);
+      tname = createTableQuery(col_list);
       jj_consume_token(SEMICOLON);
                 q = PRINT_SYNTAX_ERROR;
 
-                q_tname = createmethod.CreatingTable(tname, slist , myDatabase);
+                q_tname = createmethod.CreatingTable(tname, col_list , myDatabase);
 
                 tname = q_tname[1];
                 q = Integer.parseInt(q_tname[0]);
@@ -158,42 +189,50 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     case DROP_TABLE:
       tname = dropTableQuery();
       jj_consume_token(SEMICOLON);
-          q = dropmethod.Drop(tname , myDatabase);
-      print_message.printMessage(q, tname);
+                q = dropmethod.Drop(tname , myDatabase);
+        print_message.printMessage(q, tname);
       break;
     case DESC:
       tname = descQuery();
       jj_consume_token(SEMICOLON);
-      q = tableinfo.printDesc(tname , myDatabase);
-      print_message.printMessage(q, tname);
+        q = tableinfo.printDesc(tname , myDatabase);
+        print_message.printMessage(q, tname);
       break;
     case INSERT_INTO:
-      insertQuery();
+      tname = insertQuery(col_list, val_list, val_type);
       jj_consume_token(SEMICOLON);
-      tname = null;
-      q = PRINT_INSERT;
-      print_message.printMessage(q, tname);
+                q_str = insert_method.insertRecord(tname, col_list, val_list, val_type , myDatabase);
+
+                q = Integer.parseInt(q_str[0]);
+                str = q_str[1];
+
+        print_message.printMessage(q, str);
       break;
     case DELETE_FROM:
-      deleteQuery();
+      tname = deleteQuery(predicate_list, predicate_info_list);
       jj_consume_token(SEMICOLON);
-      tname = null;
-      q = PRINT_DELETE;
-      print_message.printMessage(q, tname);
+        q_str = delete_method.deleteRecord(tname, predicate_list, predicate_info_list, myDatabase);
+
+                q = Integer.parseInt(q_str[0]);
+                str = q_str[1];
+        print_message.printMessage(q, str);
       break;
     case SELECT:
-      selectQuery();
+      selectQuery(tname_list, tnewname_list, table_period_list, colname_list, cnewname_list, predicate_list, predicate_info_list);
       jj_consume_token(SEMICOLON);
-          tname = null;
-      q = PRINT_SELECT;
-      print_message.printMessage(q, tname);
+                q_str = select_method.selectRecord(tname_list, tnewname_list, table_period_list, colname_list, cnewname_list, predicate_list, predicate_info_list, myDatabase);
+
+        q = Integer.parseInt(q_str[0]);
+                str = q_str[1];
+
+        print_message.printMessage(q, str);
       break;
     case SHOW_TABLES:
       showTablesQuery();
       jj_consume_token(SEMICOLON);
-      tname = null;
-      q = tableinfo.printShowTable(myDatabase);
-      print_message.printMessage(q, tname);
+        tname = null;
+        q = tableinfo.printShowTable(myDatabase);
+        print_message.printMessage(q, tname);
       break;
     default:
       jj_la1[2] = jj_gen;
@@ -202,13 +241,13 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-// QUERY START  static final public String createTableQuery(ArrayList<String> slist) throws ParseException {
+// QUERY START  static final public String createTableQuery(ArrayList<String> col_list) throws ParseException {
     int q;
         String tname;
         String[] result = new String[2];
     jj_consume_token(CREATE_TABLE);
     tname = tableName();
-    tableElementList(slist);
+    tableElementList(col_list);
         {if (true) return tname;}
     throw new Error("Missing return statement in function");
   }
@@ -229,29 +268,35 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     throw new Error("Missing return statement in function");
   }
 
-  static final public void insertQuery() throws ParseException {
+  static final public String insertQuery(ArrayList<String> col_list, ArrayList<String> val_list, ArrayList<String> val_type) throws ParseException {
+        String tname;
     jj_consume_token(INSERT_INTO);
-    tableName();
-    insertColumnsAndSource();
+    tname = tableName();
+    insertColumnsAndSource(col_list, val_list, val_type);
+        {if (true) return tname;}
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void deleteQuery() throws ParseException {
+  static final public String deleteQuery(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+        String tname;
     jj_consume_token(DELETE_FROM);
-    tableName();
+    tname = tableName();
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case WHERE:
-      whereClause();
+      whereClause(predicate_list, predicate_info_list);
       break;
     default:
       jj_la1[3] = jj_gen;
       ;
     }
+    {if (true) return tname;}
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void selectQuery() throws ParseException {
+  static final public void selectQuery(ArrayList<String > tname_list, ArrayList<String > tnewname_list, ArrayList<String > table_period_list, ArrayList<String> colname_list, ArrayList<String> cnewname_list, ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     jj_consume_token(SELECT);
-    selectList();
-    tableExpression();
+    selectList(table_period_list, colname_list, cnewname_list);
+    tableExpression(tname_list, tnewname_list, predicate_list, predicate_info_list);
   }
 
   static final public void showTablesQuery() throws ParseException {
@@ -261,9 +306,9 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
 // QUERY END
 
 
-// CREATE START  static final public void tableElementList(ArrayList<String> slist) throws ParseException {
+// CREATE START  static final public void tableElementList(ArrayList<String> col_list) throws ParseException {
     jj_consume_token(LEFT_PAREN);
-    tableElement(slist);
+    tableElement(col_list);
     label_2:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -275,20 +320,20 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         break label_2;
       }
       jj_consume_token(COMMA);
-                slist.add("/");
-      tableElement(slist);
+                col_list.add("/");
+      tableElement(col_list);
     }
     jj_consume_token(RIGHT_PAREN);
   }
 
-  static final public void tableElement(ArrayList<String> slist) throws ParseException {
+  static final public void tableElement(ArrayList<String> col_list) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case LEGAL_IDENTIFIER:
-      columnDefinition(slist);
+      columnDefinition(col_list);
       break;
     case PRIMARY_KEY:
     case FOREIGN_KEY:
-      tableConstraintDefinition(slist);
+      tableConstraintDefinition(col_list);
       break;
     default:
       jj_la1[5] = jj_gen;
@@ -297,16 +342,16 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void columnDefinition(ArrayList<String> slist) throws ParseException {
+  static final public void columnDefinition(ArrayList<String> col_list) throws ParseException {
         String cname;
     cname = columnName();
-                         slist.add(cname);
-    dataType(slist);
+                         col_list.add(cname);
+    dataType(col_list);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case NOT_NULL:
       jj_consume_token(NOT_NULL);
-      slist.remove(slist.size() - 1);
-      slist.add("notNull");
+      col_list.remove(col_list.size() - 1);
+      col_list.add("notNull");
       break;
     default:
       jj_la1[6] = jj_gen;
@@ -314,13 +359,13 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void tableConstraintDefinition(ArrayList<String> slist) throws ParseException {
+  static final public void tableConstraintDefinition(ArrayList<String> col_list) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case PRIMARY_KEY:
-      primaryKeyConstraint(slist);
+      primaryKeyConstraint(col_list);
       break;
     case FOREIGN_KEY:
-      referentialConstraint(slist);
+      referentialConstraint(col_list);
       break;
     default:
       jj_la1[7] = jj_gen;
@@ -329,32 +374,32 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void primaryKeyConstraint(ArrayList<String> slist) throws ParseException {
+  static final public void primaryKeyConstraint(ArrayList<String> col_list) throws ParseException {
   Token P;
     P = jj_consume_token(PRIMARY_KEY);
-                        slist.add("primaryKey");
-    columnNameList(slist);
+                        col_list.add("primaryKey");
+    columnNameList(col_list);
   }
 
-  static final public void referentialConstraint(ArrayList<String> slist) throws ParseException {
+  static final public void referentialConstraint(ArrayList<String> col_list) throws ParseException {
         Token F;
         Token R;
         String tname;
     F = jj_consume_token(FOREIGN_KEY);
-                        slist.add("foreignKey");
-    columnNameList(slist);
+                        col_list.add("foreignKey");
+    columnNameList(col_list);
     R = jj_consume_token(REFERENCES);
-                       slist.add("references");
+                       col_list.add("references");
     tname = tableName();
-                        slist.add(tname);
-    columnNameList(slist);
+                        col_list.add(tname);
+    columnNameList(col_list);
   }
 
-  static final public void columnNameList(ArrayList<String> slist) throws ParseException {
+  static final public void columnNameList(ArrayList<String> col_list) throws ParseException {
         String cname;
     jj_consume_token(LEFT_PAREN);
     cname = columnName();
-                        slist.add(cname);
+                        col_list.add(cname);
     label_3:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -367,31 +412,31 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
       }
       jj_consume_token(COMMA);
       cname = columnName();
-                           slist.add(cname);
+                           col_list.add(cname);
     }
     jj_consume_token(RIGHT_PAREN);
   }
 
-  static final public void dataType(ArrayList<String> slist) throws ParseException {
+  static final public void dataType(ArrayList<String> col_list) throws ParseException {
   Token T1;
   Token T2;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case INT:
       T1 = jj_consume_token(INT);
-                 slist.add("int"); slist.add("nullable");
+                 col_list.add("int"); col_list.add("nullable");
       break;
     case CHAR:
       // "char" (INT_VALUE)
           T1 = jj_consume_token(CHAR);
-                    slist.add("char");
+                    col_list.add("char");
       jj_consume_token(LEFT_PAREN);
       T2 = jj_consume_token(INT_VALUE);
-                         slist.add(T2.image); slist.add("nullable");
+                         col_list.add(T2.image); col_list.add("nullable");
       jj_consume_token(RIGHT_PAREN);
       break;
     case DATE:
       T1 = jj_consume_token(DATE);
-                  slist.add("date"); slist.add("nullable");
+                  col_list.add("date"); col_list.add("nullable");
       break;
     default:
       jj_la1[9] = jj_gen;
@@ -417,13 +462,16 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
 // CREATE END
 
 
-// SELECT START  static final public void selectList() throws ParseException {
+// SELECT START  static final public void selectList(ArrayList<String > table_period_list, ArrayList<String> colname_list, ArrayList<String> cnewname_list) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case STAR:
       jj_consume_token(STAR);
+          table_period_list.add("null");
+          colname_list.add("*");
+          cnewname_list.add("*");
       break;
     case LEGAL_IDENTIFIER:
-      selectedColumn();
+      selectedColumn(table_period_list, colname_list, cnewname_list);
       label_4:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -435,7 +483,7 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
           break label_4;
         }
         jj_consume_token(COMMA);
-        selectedColumn();
+        selectedColumn(table_period_list, colname_list, cnewname_list);
       }
       break;
     default:
@@ -445,30 +493,37 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void selectedColumn() throws ParseException {
+  static final public void selectedColumn(ArrayList<String > table_period_list, ArrayList<String> colname_list, ArrayList<String> cnewname_list) throws ParseException {
+  String c;
+  String nc;
+  String t = "null";
     if (jj_2_1(4)) {
-      tableName();
+      t = tableName();
       jj_consume_token(PERIOD);
     } else {
       ;
     }
-    columnName();
+    c = columnName();
+            table_period_list.add(t);
+            nc = c;
+            colname_list.add(c);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case AS:
       jj_consume_token(AS);
-      columnName();
+      nc = columnName();
       break;
     default:
       jj_la1[12] = jj_gen;
       ;
     }
+          cnewname_list.add(nc);
   }
 
-  static final public void tableExpression() throws ParseException {
-    fromClause();
+  static final public void tableExpression(ArrayList<String > tname_list, ArrayList<String > tnewname_list, ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+    fromClause(tname_list, tnewname_list);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case WHERE:
-      whereClause();
+      whereClause(predicate_list, predicate_info_list);
       break;
     default:
       jj_la1[13] = jj_gen;
@@ -476,13 +531,13 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void fromClause() throws ParseException {
+  static final public void fromClause(ArrayList<String > tname_list, ArrayList<String > tnewname_list) throws ParseException {
     jj_consume_token(FROM);
-    tableReferenceList();
+    tableReferenceList(tname_list, tnewname_list);
   }
 
-  static final public void tableReferenceList() throws ParseException {
-    referedTable();
+  static final public void tableReferenceList(ArrayList<String > tname_list, ArrayList<String > tnewname_list) throws ParseException {
+    referedTable(tname_list, tnewname_list);
     label_5:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -494,30 +549,39 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         break label_5;
       }
       jj_consume_token(COMMA);
-      referedTable();
+      referedTable(tname_list, tnewname_list);
     }
   }
 
-  static final public void referedTable() throws ParseException {
-    tableName();
+  static final public void referedTable(ArrayList<String > tname_list, ArrayList<String > tnewname_list) throws ParseException {
+        String t;
+        String nt;
+    t = tableName();
+        tname_list.add(t);
+        nt = t;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case AS:
       jj_consume_token(AS);
-      tableName();
+      nt = tableName();
       break;
     default:
       jj_la1[15] = jj_gen;
       ;
     }
+        tnewname_list.add(nt);
   }
 
-  static final public void whereClause() throws ParseException {
+  static final public void whereClause(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     jj_consume_token(WHERE);
-    booleanValueExpression();
+    booleanValueExpression(predicate_list, predicate_info_list);
   }
 
-  static final public void booleanValueExpression() throws ParseException {
-    booleanTerm();
+  static final public void booleanValueExpression(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+                predicate_list.add("(");
+                predicate_info_list.add("LP");
+    booleanTerm(predicate_list, predicate_info_list);
+                predicate_list.add(")");
+                predicate_info_list.add("RP");
     label_6:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -529,12 +593,18 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         break label_6;
       }
       jj_consume_token(OR);
-      booleanTerm();
+            predicate_list.add("OR");
+            predicate_info_list.add("LOP");
+            predicate_list.add("(");
+            predicate_info_list.add("LP");
+      booleanTerm(predicate_list, predicate_info_list);
+            predicate_list.add(")");
+            predicate_info_list.add("RP");
     }
   }
 
-  static final public void booleanTerm() throws ParseException {
-    booleanFactor();
+  static final public void booleanTerm(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+    booleanFactor(predicate_list, predicate_info_list);
     label_7:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -546,32 +616,36 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         break label_7;
       }
       jj_consume_token(AND);
-      booleanFactor();
+      predicate_list.add("AND");
+      predicate_info_list.add("LOP");
+      booleanFactor(predicate_list, predicate_info_list);
     }
   }
 
-  static final public void booleanFactor() throws ParseException {
+  static final public void booleanFactor(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case NOT:
       jj_consume_token(NOT);
+          predicate_list.add("NOT");
+          predicate_info_list.add("NOT");
       break;
     default:
       jj_la1[18] = jj_gen;
       ;
     }
-    booleanTest();
+    booleanTest(predicate_list, predicate_info_list);
   }
 
-  static final public void booleanTest() throws ParseException {
+  static final public void booleanTest(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case CHAR_STRING:
     case INT_VALUE:
     case DATE_VALUE:
     case LEGAL_IDENTIFIER:
-      predicate();
+      predicate(predicate_list, predicate_info_list);
       break;
     case LEFT_PAREN:
-      parenthesizedBooleanExpression();
+      parenthesizedBooleanExpression(predicate_list, predicate_info_list);
       break;
     default:
       jj_la1[19] = jj_gen;
@@ -580,30 +654,48 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void parenthesizedBooleanExpression() throws ParseException {
+  static final public void parenthesizedBooleanExpression(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     jj_consume_token(LEFT_PAREN);
-    booleanValueExpression();
+    predicate_list.add("(");
+    predicate_info_list.add("LP");
+    booleanValueExpression(predicate_list, predicate_info_list);
     jj_consume_token(RIGHT_PAREN);
+    predicate_list.add(")");
+    predicate_info_list.add("RP");
   }
 
-  static final public void nullPredicate() throws ParseException {
+  static final public void nullPredicate(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+        String t;
+        String c;
+        String n;
+                predicate_list.add("(");
+                predicate_info_list.add("LP");
     if (jj_2_2(4)) {
-      tableName();
+      t = tableName();
       jj_consume_token(PERIOD);
+            predicate_list.add(t);
+            predicate_info_list.add("tname_period");
     } else {
       ;
     }
-    columnName();
-    nullOperation();
+    c = columnName();
+                predicate_list.add(c);
+                predicate_info_list.add("column_name");
+    n = nullOperation();
+                predicate_list.add(n);
+                predicate_info_list.add("NOP");
+
+                predicate_list.add(")");
+                predicate_info_list.add("RP");
   }
 
-  static final public void predicate() throws ParseException {
+  static final public void predicate(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
     if (jj_2_3(4)) {
-      comparisonPredicate();
+      comparisonPredicate(predicate_list, predicate_info_list);
     } else {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case LEGAL_IDENTIFIER:
-        nullPredicate();
+        nullPredicate(predicate_list, predicate_info_list);
         break;
       default:
         jj_la1[20] = jj_gen;
@@ -613,27 +705,40 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void comparisonPredicate() throws ParseException {
-    compOperand();
-    compOp();
-    compOperand();
+  static final public void comparisonPredicate(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+  String s;
+        predicate_list.add("(");
+        predicate_info_list.add("LP");
+    compOperand(predicate_list, predicate_info_list);
+    s = compOp();
+        predicate_list.add(s);
+        predicate_info_list.add("COMPOP");
+    compOperand(predicate_list, predicate_info_list);
+        predicate_list.add(")");
+        predicate_info_list.add("RP");
   }
 
-  static final public void compOperand() throws ParseException {
+  static final public void compOperand(ArrayList<String> predicate_list, ArrayList<String> predicate_info_list) throws ParseException {
+  String t;
+  String c;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case CHAR_STRING:
     case INT_VALUE:
     case DATE_VALUE:
-      comparableValue();
+      comparableValue(predicate_list, predicate_info_list);
       break;
     case LEGAL_IDENTIFIER:
       if (jj_2_4(4)) {
-        tableName();
+        t = tableName();
         jj_consume_token(PERIOD);
+            predicate_list.add(t);
+                predicate_info_list.add("tname_period");
       } else {
         ;
       }
-      columnName();
+      c = columnName();
+            predicate_list.add(c);
+                predicate_info_list.add("column_name");
       break;
     default:
       jj_la1[21] = jj_gen;
@@ -642,43 +747,62 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void compOp() throws ParseException {
+  static final public String compOp() throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case GREATER:
       jj_consume_token(GREATER);
+    {if (true) return ">";}
       break;
     case LESS:
       jj_consume_token(LESS);
+    {if (true) return "<";}
       break;
     case EQUAL:
       jj_consume_token(EQUAL);
+    {if (true) return "=";}
       break;
     case GRE:
       jj_consume_token(GRE);
+    {if (true) return ">=";}
       break;
     case LE:
       jj_consume_token(LE);
+    {if (true) return "<=";}
       break;
     case NE:
       jj_consume_token(NE);
+    {if (true) return "!=";}
       break;
     default:
       jj_la1[22] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void comparableValue() throws ParseException {
+  static final public void comparableValue(ArrayList<String> val_list, ArrayList<String> val_type) throws ParseException {
+  Token t;
+  String value;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case INT_VALUE:
-      jj_consume_token(INT_VALUE);
+      t = jj_consume_token(INT_VALUE);
+                value = t.image;
+                val_list.add(value);
+                val_type.add("int");
       break;
     case CHAR_STRING:
-      jj_consume_token(CHAR_STRING);
+      t = jj_consume_token(CHAR_STRING);
+                value = (t.image).toLowerCase();
+                val_list.add(value);
+                val_type.add("char");
       break;
     case DATE_VALUE:
-      jj_consume_token(DATE_VALUE);
+      //CHAR STRING
+              t = jj_consume_token(DATE_VALUE);
+                value = t.image;
+                val_list.add(value);
+                val_type.add("date");
       break;
     default:
       jj_la1[23] = jj_gen;
@@ -687,40 +811,46 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     }
   }
 
-  static final public void nullOperation() throws ParseException {
+  static final public String nullOperation() throws ParseException {
+  Token N;
+  String result;
     jj_consume_token(IS);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case NULL:
       jj_consume_token(NULL);
+      result = "is null";
+      {if (true) return result;}
       break;
     case NOT_NULL:
       jj_consume_token(NOT_NULL);
+                result = "is not null";
+                {if (true) return result;}
       break;
     default:
       jj_la1[24] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
+    throw new Error("Missing return statement in function");
   }
 
 // SELECT END
-// INSERT/DELETE START  static final public void insertColumnsAndSource() throws ParseException {
-  ArrayList<String> slist = new ArrayList<String>();
+// INSERT/DELETE START  static final public void insertColumnsAndSource(ArrayList<String> col_list, ArrayList<String> val_list, ArrayList<String> val_type) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case LEFT_PAREN:
-      columnNameList(slist);
+      columnNameList(col_list);
       break;
     default:
       jj_la1[25] = jj_gen;
       ;
     }
-    valueList();
+    valueList(val_list, val_type);
   }
 
-  static final public void valueList() throws ParseException {
+  static final public void valueList(ArrayList<String> val_list, ArrayList<String> val_type) throws ParseException {
     jj_consume_token(VALUES);
     jj_consume_token(LEFT_PAREN);
-    value();
+    value(val_list, val_type);
     label_8:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -732,20 +862,22 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
         break label_8;
       }
       jj_consume_token(COMMA);
-      value();
+      value(val_list, val_type);
     }
     jj_consume_token(RIGHT_PAREN);
   }
 
-  static final public void value() throws ParseException {
+  static final public void value(ArrayList<String> val_list, ArrayList<String> val_type) throws ParseException {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case NULL:
       jj_consume_token(NULL);
+          val_list.add("'null");
+          val_type.add("null");
       break;
     case CHAR_STRING:
     case INT_VALUE:
     case DATE_VALUE:
-      comparableValue();
+      comparableValue(val_list, val_type);
       break;
     default:
       jj_la1[27] = jj_gen;
@@ -782,7 +914,72 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     finally { jj_save(3, xla); }
   }
 
-  static private boolean jj_3_1() {
+  static private boolean jj_3R_25() {
+    if (jj_scan_token(DATE_VALUE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_16() {
+    if (jj_scan_token(LESS)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_24() {
+    if (jj_scan_token(CHAR_STRING)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_12() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_15()) {
+    jj_scanpos = xsp;
+    if (jj_3R_16()) {
+    jj_scanpos = xsp;
+    if (jj_3R_17()) {
+    jj_scanpos = xsp;
+    if (jj_3R_18()) {
+    jj_scanpos = xsp;
+    if (jj_3R_19()) {
+    jj_scanpos = xsp;
+    if (jj_3R_20()) return true;
+    }
+    }
+    }
+    }
+    }
+    return false;
+  }
+
+  static private boolean jj_3R_15() {
+    if (jj_scan_token(GREATER)) return true;
+    return false;
+  }
+
+  static private boolean jj_3_3() {
+    if (jj_3R_10()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_23() {
+    if (jj_scan_token(INT_VALUE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_21() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_23()) {
+    jj_scanpos = xsp;
+    if (jj_3R_24()) {
+    jj_scanpos = xsp;
+    if (jj_3R_25()) return true;
+    }
+    }
+    return false;
+  }
+
+  static private boolean jj_3_4() {
     if (jj_3R_9()) return true;
     if (jj_scan_token(PERIOD)) return true;
     return false;
@@ -792,12 +989,7 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_3_4()) jj_scanpos = xsp;
-    if (jj_3R_16()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_13() {
-    if (jj_3R_15()) return true;
+    if (jj_3R_22()) return true;
     return false;
   }
 
@@ -811,50 +1003,45 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     return false;
   }
 
-  static private boolean jj_3R_15() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(41)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(40)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(46)) return true;
-    }
-    }
+  static private boolean jj_3R_13() {
+    if (jj_3R_21()) return true;
     return false;
   }
 
-  static private boolean jj_3R_16() {
+  static private boolean jj_3_2() {
+    if (jj_3R_9()) return true;
+    if (jj_scan_token(PERIOD)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_20() {
+    if (jj_scan_token(NE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_19() {
+    if (jj_scan_token(LE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_18() {
+    if (jj_scan_token(GRE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_22() {
     if (jj_scan_token(LEGAL_IDENTIFIER)) return true;
     return false;
   }
 
-  static private boolean jj_3R_10() {
-    if (jj_3R_11()) return true;
-    if (jj_3R_12()) return true;
-    if (jj_3R_11()) return true;
+  static private boolean jj_3R_17() {
+    if (jj_scan_token(EQUAL)) return true;
     return false;
   }
 
-  static private boolean jj_3R_12() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(34)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(35)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(36)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(49)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(50)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(51)) return true;
-    }
-    }
-    }
-    }
-    }
+  static private boolean jj_3_1() {
+    if (jj_3R_9()) return true;
+    if (jj_scan_token(PERIOD)) return true;
     return false;
   }
 
@@ -863,20 +1050,10 @@ public class SimpleDBMSParser implements SimpleDBMSParserConstants {
     return false;
   }
 
-  static private boolean jj_3_3() {
-    if (jj_3R_10()) return true;
-    return false;
-  }
-
-  static private boolean jj_3_4() {
-    if (jj_3R_9()) return true;
-    if (jj_scan_token(PERIOD)) return true;
-    return false;
-  }
-
-  static private boolean jj_3_2() {
-    if (jj_3R_9()) return true;
-    if (jj_scan_token(PERIOD)) return true;
+  static private boolean jj_3R_10() {
+    if (jj_3R_11()) return true;
+    if (jj_3R_12()) return true;
+    if (jj_3R_11()) return true;
     return false;
   }
 

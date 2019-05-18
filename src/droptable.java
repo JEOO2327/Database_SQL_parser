@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 import com.sleepycat.je.Database;
 
 public class droptable {
@@ -12,6 +14,12 @@ public class droptable {
 	public int Drop(String tname , Database myDatabase)
 	{
 		dbmanager dbmanage = new dbmanager();
+		delete deletemethod = new delete();
+		
+		//empty
+		ArrayList<String> predicate_list = new ArrayList<String>();
+		ArrayList<String> predicate_info_list = new ArrayList<String>();
+		
 	    int q = SUCCESS_DROP_TABLE;
 		String rTables = dbmanage.getDataFromDB(tname + "/refered/tableCount" , myDatabase);
 		int rTableNums = -1;
@@ -25,7 +33,7 @@ public class droptable {
 		String tmpkey = "";
 		String tmpkey_ = "";
 		String tableExist = dbmanage.getDataFromDB(tname + "/exist" , myDatabase);
-
+		
 		int Colcount = -1;
 		int Forcount = -1;
 		int FColcount = -1;
@@ -92,6 +100,12 @@ public class droptable {
 			pColcount = -1;
 
 //delete col
+		
+
+		System.out.println("delete records");
+		deletemethod.deleteRecord(tname, predicate_list, predicate_info_list, myDatabase);
+
+		
 		for(int i = 1; i <= Colcount; i++)
 		{
 		  key = tname + "/col" + String.valueOf(i);
@@ -115,33 +129,55 @@ public class droptable {
 			dbmanage.deleteData(key , myDatabase);
 			dbmanage.deleteData(tmpkey , myDatabase);
 		}
-//delete for
+// delete - /tname/for[i]
 		for(int i = 1; i <= Forcount; i++)
 		{
 			key = tname + "/for" + String.valueOf(i);
 			data = dbmanage.getDataFromDB(key + "/Colcount" , myDatabase);
 			FColcount = Integer.parseInt(data);
-//delete fcol
 			for(int j = 1; j <= FColcount; j++)
 			{
+
+// get - /tname/for[i]/col[j]				
 				tmpkey = key + "/col" + String.valueOf(j);
 				tmpdata = dbmanage.getDataFromDB(tmpkey , myDatabase);
-				tmpkey_ = tname + "/fors/" + tmpdata;
+
+// 3rd hw added - 8.1
+// delete - tname / forcols / [colname] , [rcolname] 
+				tmpkey_ = tname + "/forcols/" + tmpdata;
+			  	dbmanage.deleteData( tmpkey_, myDatabase);
+				
+// added 3rd hw - 9.1				
+// delete - /tname/fortable/[colname] 
+				tmpkey_ = tname + "/fortable/" + tmpdata;
 				dbmanage.deleteData(tmpkey_ , myDatabase);
 				
+// delete - /tname/fors/[colname]
+				tmpkey_ = tname + "/fors/" + tmpdata;
+				dbmanage.deleteData(tmpkey_ , myDatabase);
+// delete - /tname/for[i]/col[j]	 fcol								
 				dbmanage.deleteData(tmpkey , myDatabase);
 			}
 
 			key = tname + "/for" + String.valueOf(i);
 			data = dbmanage.getDataFromDB(key + "/refer/rColcount" , myDatabase);
 			rColcount = Integer.parseInt(data);
-//delete rcol			
-			for(int j = 1; j <= rColcount; j++)
+// delete rcol			// key : [tname] / for[i]
+			for(int k = 1; k <= rColcount; k++)
 			{
-				tmpkey = key + "/refer/rcol" + String.valueOf(j);
-				dbmanage.deleteData(tmpkey , myDatabase);
+			    // tname/for1/refer/rcol2
+
+				tmpkey = key + "/refer/rcol" + String.valueOf(k);
+
+				data = dbmanage.getDataFromDB(tmpkey, myDatabase);
+
+				
+				dbmanage.deleteData(tmpkey , myDatabase);				
 			}
 
+			
+			
+			
 		  	dbmanage.deleteData(key + "/refer" , myDatabase);
 		  	dbmanage.deleteData(key + "/Colcount" , myDatabase);
 		  	dbmanage.deleteData(key + "/refer/rColcount" , myDatabase);
@@ -183,6 +219,8 @@ public class droptable {
 			dbmanage.deleteData("table/nums" , myDatabase);
 			dbmanage.deleteData("table-list/table1" , myDatabase);
 		}
+		
+		
 		return q;
 	}
 
